@@ -1,0 +1,5 @@
+{
+  "name": "Techarja Exam Builder",
+  "description": "An AI-powered exam generator that creates structured assessments from PDF course materials, tracks student performance, and provides detailed analytics.",
+  "requestFramePermissions": []
+}
