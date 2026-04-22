@@ -165,8 +165,14 @@
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <script src="https://unpkg.com/compromise"></script>
   <script>
-    // Setup PDF.js worker
-    const { pdfjsLib } = globalThis;
+    // Global Error Handler for debugging
+    window.onerror = function(msg, url, lineNo, columnNo, error) {
+      alert("GLOBAL ERROR: " + msg + "\nLine: " + lineNo + "\nColumn: " + columnNo);
+      return false;
+    };
+
+    // Ensure pdfjsLib is globally available
+    window.pdfjsLib = window['pdfjs-dist/build/pdf'] || window.pdfjsLib;
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
   </script>
 </head>
@@ -284,6 +290,13 @@
         PDF and generating a
         comprehensive
         structured analysis. This may take a minute.</p>
+      
+      <!-- Error Feedback Area -->
+      <div id="error-feedback" class="mt-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 hidden max-w-md">
+        <p class="font-bold mb-1">Analysis Error:</p>
+        <p id="error-message" class="text-sm"></p>
+        <button onclick="location.reload()" class="mt-3 text-xs underline">Reload Page</button>
+      </div>
     </section>
 
     <!-- STATE: RESULTS -->
@@ -699,6 +712,10 @@
 
       sections.upload.classList.add('hidden');
       sections.loading.classList.remove('hidden');
+      
+      // Reset error state
+      const errorFeedback = document.getElementById('error-feedback');
+      if (errorFeedback) errorFeedback.classList.add('hidden');
 
       const loadMessages = ["Reading PDF locally...", "Analyzing patterns...", "Extracting concepts...", "Structuring notes..."];
       let msgIdx = 0;
@@ -708,37 +725,60 @@
       }, 1500);
 
       try {
+        console.log("Starting analysis for:", selectedFile.name);
+        
+        // Check dependencies
+        if (typeof pdfjsLib === 'undefined') throw new Error("PDF.js library failed to load. Please check your internet connection.");
+        if (typeof nlp === 'undefined') throw new Error("Compromise NLP library failed to load. Please check your internet connection.");
+
         // 1. Extract Text Locally
         const arrayBuffer = await selectedFile.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        console.log("ArrayBuffer size:", arrayBuffer.byteLength);
+        
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        const pdf = await loadingTask.promise;
+        console.log("PDF loaded, pages:", pdf.numPages);
+
         let fullText = "";
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const textContent = await page.getTextContent();
-          fullText += textContent.items.map(item => item.str).join(" ") + "\n";
+          if (textContent && textContent.items) {
+            fullText += textContent.items
+              .filter(item => item && typeof item.str === 'string')
+              .map(item => item.str)
+              .join(" ") + "\n";
+          }
         }
+        console.log("Text extracted, length:", fullText.length);
+
+        if (!fullText.trim()) throw new Error("No text content found in PDF.");
 
         // 2. Process with Compromise (Heuristics)
         const doc = nlp(fullText);
         
         // Better Heuristics for "Lots of Data"
-        const sentences = doc.sentences().out('array');
+        const sentences = doc.sentences().out('array') || [];
+        console.log("Total sentences:", sentences.length);
         
         // Definitions: lines containing common definition markers
         const definitions = sentences.filter(s => 
-          / (is|are|means|refers to|defined as|describes) /.test(s.toLowerCase())
+          s && typeof s === 'string' && / (is|are|means|refers to|defined as|describes) /.test(s.toLowerCase())
         );
 
         // Key Points: look for lines that look like list items or short impactful sentences
         const keyPoints = sentences.filter(s => 
-          s.length > 30 && s.length < 150 && !definitions.includes(s)
+          s && typeof s === 'string' && s.length > 30 && s.length < 150 && !definitions.includes(s)
         ).slice(0, 30);
 
         // Concepts: All nouns that appear frequently
-        const nouns = doc.nouns().out('frequency')
-          .filter(n => n.text.length > 3 && n.count > 1)
+        const nounsFrequency = doc.nouns().out('frequency') || [];
+        const nouns = nounsFrequency
+          .filter(n => n && n.text && typeof n.text === 'string' && n.text.length > 3 && n.count > 1)
           .map(n => n.text);
         
+        console.log("Analysis complete. Definitions:", definitions.length, "Concepts:", nouns.length);
+
         // 3. Build Result Object
         const resultObj = {
           summary: {
@@ -776,10 +816,21 @@
 
       } catch (err) {
         clearInterval(msgInterval);
-        alert("Failed to analyze PDF locally: " + err.message);
-        console.error(err);
-        sections.loading.classList.add('hidden');
-        sections.upload.classList.remove('hidden');
+        console.error("Analysis Error:", err);
+        
+        // Visual Feedback
+        const errorFeedback = document.getElementById('error-feedback');
+        const errorMessage = document.getElementById('error-message');
+        if (errorFeedback && errorMessage) {
+          errorFeedback.classList.remove('hidden');
+          errorMessage.textContent = err.message;
+        } else {
+          alert("Lecture Analysis Error:\n" + err.message);
+        }
+        
+        // Don't immediately hide loading so user can read error
+        // sections.loading.classList.add('hidden');
+        // sections.upload.classList.remove('hidden');
       }
     });
 

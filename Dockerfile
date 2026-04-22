@@ -1,26 +1,15 @@
-# Use Node.js 18 as the base image
-FROM node:18-alpine
-
-# Set the working directory inside the container
+# Stage 1: Build
+FROM node:18-alpine AS build
 WORKDIR /app
-
-# Copy package files first to optimize build speed
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
-
-# Copy the rest of your application code
 COPY . .
-
-# Build the application (standard for React/Vite)
 RUN npm run build
 
-# Install a simple server to serve the static build
-RUN npm install -g serve
-
-# Expose the port (3000 is common for React apps)
-EXPOSE 3000
-
-# Start the application
-CMD ["serve", "-s", "dist", "-l", "3000"]
+# Stage 2: Serve with Nginx
+FROM nginx:alpine
+# Copy the build output to Nginx's serving directory
+COPY --from=build /app/dist /usr/share/nginx/html
+# Expose port 80 for Nginx
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

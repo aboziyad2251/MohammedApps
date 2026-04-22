@@ -1,6 +1,7 @@
 services:
-  mohammedapps:
+  test1exam:
+    container_name: test1exam
     build: .
     ports:
-      - "80:3000"
+      - "4001:80"
     restart: always
