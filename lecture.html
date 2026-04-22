@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lecture Analyzer - Techarja Exam Builder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            slate: {
+              850: '#151F32',
+              950: '#020617',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* Animations */
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes float3d {
+
+      0%,
+      100% {
+        transform: translateY(0) scale(1);
+      }
+
+      50% {
+        transform: translateY(-10px) scale(1.02);
+      }
+    }
+
+    @keyframes pulse-glow {
+
+      0%,
+      100% {
+        opacity: 0.5;
+      }
+
+      50% {
+        opacity: 1;
+      }
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+    }
+
+    .dark .glass-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    }
+
+    .glass-card-hover:hover {
+      border-color: rgba(139, 92, 246, 0.4);
+      transform: scale(1.01);
+      box-shadow: 0 0 40px rgba(139, 92, 246, 0.1);
+    }
+
+    .dark .glass-card-hover:hover {
+      border-color: rgba(139, 92, 246, 0.6);
+      box-shadow: 0 0 40px rgba(139, 92, 246, 0.2);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Mindgrasp-like notes style */
+    .ai-notes h2 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #c4b5fd;
+      border-bottom: 1px solid rgba(139, 92, 246, 0.3);
+      padding-bottom: 0.5rem;
+      margin-top: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .ai-notes h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #f0abfc;
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .ai-notes ul {
+      list-style: none;
+      padding-left: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .ai-notes li {
+      position: relative;
+      padding-left: 1.5rem;
+      margin-bottom: 0.5rem;
+      line-height: 1.6;
+    }
+
+    .ai-notes li::before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: #8b5cf6;
+      font-size: 1.5rem;
+      line-height: 1;
+      top: -2px;
+    }
+
+    .ai-notes strong {
+      color: #22d3ee;
+      background: rgba(6, 182, 212, 0.1);
+      padding: 0.1rem 0.4rem;
+      border-radius: 0.25rem;
+    }
+  </style>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body
+  class="bg-slate-50 text-slate-900 dark:bg-slate-50 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300 min-h-screen flex flex-col">
+  <!-- Interactive Aurora Background Canvas -->
+  <canvas id="aurora"
+    style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -2; opacity: 0.6; pointer-events: none;"></canvas>
+
+  <!-- App Header -->
+  <header class="p-6 flex justify-between items-center z-10 w-full max-w-6xl mx-auto">
+    <a href="index.html"
+      class="flex items-center gap-2 text-slate-600 dark:text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-900 dark:text-white transition-colors group">
+      <i data-lucide="arrow-left" class="w-4 h-4 group-hover:-translate-x-1 transition-transform"></i>
+      Back to Exam Builder
+    </a>
+    <h1
+      class="text-2xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 dark:from-violet-400 dark:via-fuchsia-400 dark:to-pink-400 bg-clip-text text-transparent absolute left-1/2 -translate-x-1/2">
+      Lecture Analyzer
+    </h1>
+    <div class="flex items-center gap-4">
+      <button id="theme-toggle-btn"
+        class="p-2 rounded-xl bg-slate-200 dark:bg-black/5 dark:bg-white/5 hover:bg-slate-300 dark:hover:bg-black/10 dark:bg-white/10 text-slate-700 dark:text-slate-700 dark:text-slate-300 transition-colors border border-slate-300 dark:border-black/10 dark:border-white/10">
+        <i data-lucide="moon" class="w-5 h-5 hidden dark:block"></i>
+        <i data-lucide="sun" class="w-5 h-5 block dark:hidden"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 w-full max-w-6xl mx-auto p-4 md:p-6 z-10 relative">
+
+    <!-- STATE: UPLOAD -->
+    <section id="upload-section" class="max-w-2xl mx-auto mt-10">
+      <div class="text-center mb-8">
+        <h2
+          class="text-4xl font-extrabold mb-4 bg-gradient-to-r from-slate-50 dark:from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">
+          Transform Lectures into Knowledge</h2>
+        <p class="text-slate-600 dark:text-slate-600 dark:text-slate-400 text-lg">Upload any PDF lecture. Get AI
+          summaries, structured
+          notes, concept cards, and
+          a generated exam instantly.</p>
+      </div>
+
+      <div class="flex justify-center mb-6">
+        <div class="glass-card p-4 rounded-xl flex flex-col gap-2 w-full max-w-sm">
+          <label
+            class="text-sm font-semibold text-slate-700 dark:text-slate-700 dark:text-slate-300 flex items-center gap-2">
+            <i data-lucide="graduation-cap" class="w-4 h-4 text-violet-500 dark:text-violet-400"></i> Education Level
+          </label>
+          <select id="education-level"
+            class="bg-white dark:bg-black/5 dark:bg-white/5 border border-slate-300 dark:border-black/10 dark:border-white/10 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-violet-500 text-sm appearance-none text-slate-900 dark:text-slate-100">
+            <option value="University Level">University Level</option>
+            <option value="Secondary School">Secondary School</option>
+            <option value="Intermediate School">Intermediate School</option>
+            <option value="Primary School">Primary School</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="dropzone"
+        class="glass-card p-12 rounded-3xl border-2 border-dashed border-slate-300 dark:border-white/20 hover:border-violet-500/50 dark:hover:border-violet-500/50 transition-all flex flex-col items-center justify-center cursor-pointer group"
+        style="animation: float3d 6s ease-in-out infinite;">
+        <input type="file" id="file-input" accept="application/pdf" class="hidden">
+
+        <div
+          class="w-20 h-20 mb-6 rounded-full bg-gradient-to-br from-violet-600/10 to-fuchsia-600/10 dark:from-violet-600/20 dark:to-fuchsia-600/20 flex items-center justify-center relative">
+          <div
+            class="absolute inset-0 rounded-full bg-violet-500/20 dark:bg-violet-500/30 blur-xl group-hover:bg-violet-500/40 dark:group-hover:bg-violet-500/50 transition-colors">
+          </div>
+          <i data-lucide="upload-cloud"
+            class="w-10 h-10 text-violet-600 dark:text-violet-700 dark:text-violet-300 relative z-10"></i>
+        </div>
+
+        <h3 class="text-xl font-bold text-slate-900 dark:text-slate-900 dark:text-white mb-2" id="file-name-display">
+          Drag & Drop PDF Here
+        </h3>
+        <p class="text-slate-600 dark:text-slate-600 dark:text-slate-400 mb-6" id="file-size-display">or click to browse
+          files (max 50MB)
+        </p>
+
+        <button id="select-file-btn"
+          class="px-6 py-3 rounded-xl bg-black/5 dark:bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-black/10 dark:bg-white/10 border border-slate-300 dark:border-black/10 dark:border-white/10 transition-colors font-medium flex items-center gap-2 text-slate-900 dark:text-slate-900 dark:text-white">
+          <i data-lucide="file" class="w-4 h-4"></i> Select File
+        </button>
+      </div>
+
+      <div class="mt-8 text-center">
+        <button id="analyze-btn"
+          class="px-8 py-4 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-slate-900 dark:text-white font-bold text-lg shadow-[0_0_20px_rgba(139,92,246,0.2)] hover:shadow-[0_0_30px_rgba(139,92,246,0.4)] dark:shadow-[0_0_30px_rgba(139,92,246,0.3)] dark:hover:shadow-[0_0_40px_rgba(139,92,246,0.5)] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 mx-auto"
+          disabled>
+          <i data-lucide="sparkles" class="w-5 h-5"></i> Analyze Lecture
+        </button>
+      </div>
+    </section>
+
+    <!-- STATE: LOADING -->
+    <section id="loading-section" class="max-w-2xl mx-auto mt-20 flex flex-col items-center justify-center hidden">
+      <div class="relative w-32 h-32 mb-8">
+        <div class="absolute inset-0 rounded-full border-4 border-slate-800"></div>
+        <div
+          class="absolute inset-0 rounded-full border-4 border-violet-500 border-t-transparent animate-[spin_1.5s_linear_infinite]">
+        </div>
+        <div
+          class="absolute inset-2 rounded-full border-4 border-fuchsia-500 border-b-transparent animate-[spin_2s_linear_infinite_reverse]">
+        </div>
+        <i data-lucide="brain-circuit"
+          class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 text-violet-400"></i>
+      </div>
+
+      <h2 id="loading-text"
+        class="text-2xl font-bold text-slate-900 dark:text-slate-900 dark:text-white mb-2 animate-pulse">Reading lecture
+        content...</h2>
+      <p class="text-slate-600 dark:text-slate-600 dark:text-slate-400 text-center max-w-md">Our AI is processing the
+        PDF and generating a
+        comprehensive
+        structured analysis. This may take a minute.</p>
+    </section>
+
+    <!-- STATE: RESULTS -->
+    <section id="results-section" class="w-full hidden">
+      <!-- Tabs header -->
+      <div class="flex flex-wrap border-b border-black/10 dark:border-white/10 mb-8 gap-2 pb-2">
+        <button
+          class="nav-tab active px-5 py-2.5 rounded-lg font-medium text-sm transition-all bg-violet-200 dark:bg-violet-600/20 text-violet-700 dark:text-violet-700 dark:text-violet-300 border border-violet-500/30 flex items-center gap-2"
+          data-target="tab-summary"><i data-lucide="file-text" class="w-4 h-4"></i> Summary</button>
+        <button
+          class="nav-tab px-5 py-2.5 rounded-lg font-medium text-sm transition-all hover:bg-black/5 dark:hover:bg-black/5 dark:bg-white/5 text-slate-600 dark:text-slate-600 dark:text-slate-400 flex items-center gap-2"
+          data-target="tab-notes"><i data-lucide="pen-tool" class="w-4 h-4"></i> AI Notes</button>
+        <button
+          class="nav-tab px-5 py-2.5 rounded-lg font-medium text-sm transition-all hover:bg-black/5 dark:hover:bg-black/5 dark:bg-white/5 text-slate-600 dark:text-slate-600 dark:text-slate-400 flex items-center gap-2"
+          data-target="tab-concepts"><i data-lucide="lightbulb" class="w-4 h-4"></i> Key Concepts</button>
+        <button
+          class="nav-tab px-5 py-2.5 rounded-lg font-medium text-sm transition-all hover:bg-black/5 dark:hover:bg-black/5 dark:bg-white/5 text-slate-600 dark:text-slate-600 dark:text-slate-400 flex items-center gap-2"
+          data-target="tab-exam"><i data-lucide="check-square" class="w-4 h-4"></i> Mock Exam</button>
+        <button
+          class="nav-tab px-5 py-2.5 rounded-lg font-medium text-sm transition-all hover:bg-black/5 dark:hover:bg-black/5 dark:bg-white/5 text-slate-600 dark:text-slate-600 dark:text-slate-400 flex items-center gap-2"
+          data-target="tab-notebook"><i data-lucide="book-open" class="w-4 h-4"></i> NotebookLM</button>
+      </div>
+
+      <div class="relative min-h-[60vh] pb-24">
+        <!-- Summary Tab -->
+        <div id="tab-summary"
+          class="tab-content glass-card p-6 md:p-10 rounded-3xl animate-[float3d_10s_ease-in-out_infinite]">
+          <h2 id="res-title"
+            class="text-3xl font-extrabold mb-6 bg-gradient-to-r from-violet-600 to-pink-600 dark:from-violet-400 dark:to-pink-400 bg-clip-text text-transparent">
+          </h2>
+
+          <div
+            class="mb-8 p-5 rounded-2xl bg-cyan-900/10 dark:bg-cyan-900/20 border border-cyan-500/30 text-cyan-800 dark:text-cyan-100 flex gap-4">
+            <i data-lucide="zap" class="w-6 h-6 text-cyan-600 dark:text-cyan-400 shrink-0 mt-1"></i>
+            <div>
+              <h3 class="font-bold text-cyan-700 dark:text-cyan-400 mb-1">TL;DR</h3>
+              <p id="res-tldr" class="italic leading-relaxed"></p>
+            </div>
+          </div>
+
+          <div class="mb-10">
+            <h3 class="text-xl font-bold text-slate-900 dark:text-slate-900 dark:text-white mb-3">Overview</h3>
+            <p id="res-overview" class="text-slate-700 dark:text-slate-700 dark:text-slate-300 leading-relaxed text-lg">
+            </p>
+          </div>
+
+          <h3 class="text-xl font-bold text-slate-900 dark:text-slate-900 dark:text-white mb-4">Chapter Breakdown</h3>
+          <div id="res-chapters" class="space-y-4"></div>
+        </div>
+
+        <!-- Notes Tab -->
+        <div id="tab-notes" class="tab-content hidden glass-card p-6 md:p-10 rounded-3xl ai-notes">
+          <div
+            class="flex justify-end gap-3 mb-6 border-b border-slate-300 dark:border-black/10 dark:border-white/10 pb-4">
+            <button id="copy-notes-btn"
+              class="px-4 py-2 rounded-lg bg-black/5 dark:bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-black/10 dark:bg-white/10 text-slate-700 dark:text-slate-700 dark:text-slate-300 text-sm font-medium flex items-center gap-2 transition-colors"><i
+                data-lucide="copy" class="w-4 h-4"></i> Copy Notes</button>
+          </div>
+          <div id="res-notes" class="text-slate-700 dark:text-slate-700 dark:text-slate-300 leading-relaxed"></div>
+        </div>
+
+        <!-- Concepts Tab -->
+        <div id="tab-concepts" class="tab-content hidden">
+          <h3 class="text-2xl font-bold text-slate-900 dark:text-slate-900 dark:text-white mb-6">Core Concepts to
+            Remember</h3>
+          <div id="res-concepts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12"></div>
+        </div>
+
+        <!-- Exam Tab -->
+        <div id="tab-exam" class="tab-content hidden glass-card p-6 md:p-10 rounded-3xl max-w-4xl mx-auto">
+          <div id="exam-intro" class="text-center py-10">
+            <div
+              class="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(217,70,239,0.3)]">
+              <i data-lucide="award" class="w-10 h-10 text-slate-900 dark:text-white"></i>
+            </div>
+            <h2 class="text-3xl font-extrabold mb-4 text-slate-900 dark:text-slate-900 dark:text-white">Generate Mock
+              Exam</h2>
+            <p class="text-slate-600 dark:text-slate-600 dark:text-slate-400 text-lg mb-6 max-w-md mx-auto">Select your
+              desired difficulty
+              to generate 20 intelligent questions specifically tailored to this lecture.</p>
+
+            <div class="mb-8 max-w-xs mx-auto text-left">
+              <label
+                class="text-sm font-semibold text-slate-700 dark:text-slate-700 dark:text-slate-300 flex items-center gap-2 mb-2">
+                <i data-lucide="target" class="w-4 h-4 text-fuchsia-500 dark:text-fuchsia-400"></i> Exam Difficulty
+              </label>
+              <select id="exam-difficulty"
+                class="bg-white dark:bg-black/5 dark:bg-white/5 border border-slate-300 dark:border-black/10 dark:border-white/10 rounded-lg p-2.5 outline-none focus:ring-2 focus:ring-fuchsia-500 text-sm appearance-none w-full text-slate-900 dark:text-slate-100">
+                <option value="Medium">Medium</option>
+                <option value="Easy">Easy</option>
+                <option value="Hard">Hard</option>
+                <option value="Tricky Mode">Tricky Mode</option>
+              </select>
+            </div>
+
+            <button id="start-exam-inline-btn"
+              class="px-8 py-4 rounded-xl bg-violet-600 hover:bg-violet-500 text-slate-900 dark:text-white font-bold text-lg shadow-[0_0_20px_rgba(139,92,246,0.4)] transition-all">
+              Generate Challenge
+            </button>
+          </div>
+
+          <div id="exam-loading-state" class="hidden text-center py-20">
+            <div
+              class="w-16 h-16 mx-auto mb-6 border-4 border-violet-500 border-t-transparent rounded-full animate-[spin_1s_linear_infinite]">
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 dark:text-slate-900 dark:text-white animate-pulse">Crafting
+              unique questions...</h3>
+            <p class="text-slate-600 dark:text-slate-600 dark:text-slate-400 mt-2">This may take 10-15 seconds.</p>
+          </div>
+
+          <div id="exam-runner" class="hidden">
+            <div
+              class="flex justify-between items-center mb-8 border-b border-slate-300 dark:border-black/10 dark:border-white/10 pb-4">
+              <span class="text-slate-600 dark:text-slate-600 dark:text-slate-400 font-medium">Question <span
+                  id="q-current" class="text-violet-600 dark:text-violet-400 text-lg">1</span> of 20</span>
+              <span id="q-topic-badge"
+                class="px-3 py-1 rounded-full bg-fuchsia-100 dark:bg-black/5 dark:bg-white/5 border border-fuchsia-200 dark:border-black/10 dark:border-white/10 text-xs text-fuchsia-700 dark:text-fuchsia-300 font-medium">Topic</span>
+            </div>
+
+            <h3 id="q-text"
+              class="text-2xl text-slate-900 dark:text-slate-900 dark:text-white font-medium mb-8 leading-snug"></h3>
+
+            <div id="q-options" class="flex flex-col gap-3 mb-10">
+              <!-- Options populated by JS -->
+            </div>
+
+            <div class="flex justify-between items-center">
+              <button id="q-prev"
+                class="px-5 py-2.5 rounded-lg bg-black/5 dark:bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-black/10 dark:bg-white/10 text-slate-800 dark:text-slate-900 dark:text-white font-medium transition-colors hidden">Previous</button>
+              <div class="flex-1"></div>
+              <button id="q-next"
+                class="px-8 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-slate-900 dark:text-white font-bold shadow-[0_0_20px_rgba(139,92,246,0.3)] transition-all disabled:opacity-50">Next</button>
+            </div>
+          </div>
+
+          <div id="exam-results-view" class="hidden text-center py-10">
+            <h2
+              class="text-4xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-cyan-500 dark:from-emerald-400 dark:to-cyan-400">
+              Exam Completed!</h2>
+            <p class="text-xl text-slate-700 dark:text-slate-700 dark:text-slate-300 mb-8">You scored <span
+                id="exam-score" class="font-bold text-slate-900 dark:text-slate-900 dark:text-white"></span>
+              out of 20 (<span id="exam-percentage" class="text-emerald-600 dark:text-emerald-400 font-bold"></span>)
+            </p>
+            <button
+              onclick="document.getElementById('exam-results-view').classList.add('hidden'); document.getElementById('exam-intro').classList.remove('hidden');"
+              class="px-6 py-3 rounded-lg bg-black/10 dark:bg-black/10 dark:bg-white/10 hover:bg-black/20 dark:hover:bg-white/20 text-slate-900 dark:text-slate-900 dark:text-white font-medium transition-colors">Take
+              Again</button>
+          </div>
+        </div>
+
+        <!-- NotebookLM tab -->
+        <div id="tab-notebook" class="tab-content hidden glass-card p-6 md:p-10 rounded-3xl">
+          <div class="flex gap-6 items-start">
+            <div class="p-4 rounded-2xl bg-blue-900/20 border border-blue-500/30 text-blue-400 shrink-0">
+              <i data-lucide="book-open" class="w-8 h-8"></i>
+            </div>
+            <div>
+              <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-2">Google NotebookLM Integrator</h2>
+              <p class="text-slate-700 dark:text-slate-300 mb-6">Connect this lecture to your NotebookLM for
+                hyper-accurate, source-grounded
+                answers generated by Google's Audio Overview AI.</p>
+
+              <div class="space-y-6">
+                <div class="flex gap-4">
+                  <div
+                    class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center font-bold text-blue-300 shrink-0">
+                    1</div>
+                  <div>
+                    <p class="text-slate-900 dark:text-white font-medium mb-1">Upload to NotebookLM</p>
+                    <p class="text-sm text-slate-600 dark:text-slate-400">Go to <a href="https://notebooklm.google.com"
+                        target="_blank" class="text-blue-400 hover:underline">notebooklm.google.com</a> and upload your
+                      PDF there.</p>
+                  </div>
+                </div>
+
+                <div class="flex gap-4">
+                  <div
+                    class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center font-bold text-blue-300 shrink-0">
+                    2</div>
+                  <div class="w-full">
+                    <label class="text-slate-900 dark:text-white font-medium mb-2 block">Paste your Notebook URL</label>
+                    <input type="text" id="notebook-url" placeholder="https://notebooklm.google.com/notebook/..."
+                      class="w-full bg-black/30 border border-black/10 dark:border-white/10 rounded-xl p-3 outline-none focus:border-blue-500 transition-colors text-slate-900 dark:text-white">
+                  </div>
+                </div>
+
+                <div class="flex gap-4">
+                  <div
+                    class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center font-bold text-blue-300 shrink-0">
+                    3</div>
+                  <div class="w-full">
+                    <p class="text-slate-900 dark:text-white font-medium mb-2">Ask Claude Code</p>
+                    <p class="text-sm text-slate-600 dark:text-slate-400 mb-3">Copy this magical prompt into your Claude
+                      Code terminal to
+                      automatically use the NotebookLM skill!</p>
+
+                    <div class="relative">
+                      <textarea id="claude-prompt-text"
+                        class="w-full h-24 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl p-4 text-sm text-green-400 font-mono resize-none focus:outline-none"
+                        readonly>Ask my NotebookLM skill to answer this: "[Type your question here]" using notebook URL: </textarea>
+                      <button id="copy-prompt-btn"
+                        class="absolute top-2 right-2 p-2 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:bg-white/10 rounded-lg text-slate-700 dark:text-slate-300 transition-colors"><i
+                          data-lucide="copy" class="w-4 h-4"></i></button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- Scripts -->
+  <script>
+    lucide.createIcons();
+
+    // Aurora Canvas Background
+    (function () {
+      const canvas = document.getElementById('aurora');
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+        let targetX = mouseX;
+        let targetY = mouseY;
+
+        function resize() {
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        window.addEventListener('mousemove', (e) => {
+          targetX = e.clientX;
+          targetY = e.clientY;
+        });
+
+        const particles = [];
+        class Particle {
+          constructor() { this.reset(); }
+          reset() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.vx = (Math.random() - 0.5) * 0.5;
+            this.vy = (Math.random() - 0.5) * 0.5;
+            this.radius = Math.random() * 2 + 1;
+            this.opacity = Math.random() * 0.5 + 0.2;
+          }
+          update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            const dx = mouseX - this.x;
+            const dy = mouseY - this.y;
+            if (Math.sqrt(dx * dx + dy * dy) < 200) {
+              this.vx += dx * 0.00001; this.vy += dy * 0.00001;
+            }
+            if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) this.reset();
+          }
+          draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(139, 92, 246, ${this.opacity})`;
+            ctx.fill();
+          }
+        }
+        for (let i = 0; i < 50; i++) particles.push(new Particle());
+
+        function drawGradients() {
+          mouseX += (targetX - mouseX) * 0.05;
+          mouseY += (targetY - mouseY) * 0.05;
+          ctx.fillStyle = 'rgba(2, 6, 23, 0.1)';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          const time = Date.now() * 0.001;
+          const g1 = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 400);
+          g1.addColorStop(0, 'rgba(139, 92, 246, 0.4)');
+          g1.addColorStop(0.5, 'rgba(139, 92, 246, 0.2)');
+          g1.addColorStop(1, 'rgba(139, 92, 246, 0)');
+          ctx.fillStyle = g1; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          const x2 = canvas.width * 0.7 + Math.sin(time * 0.5) * 100;
+          const y2 = canvas.height * 0.3 + Math.cos(time * 0.3) * 100;
+          const g2 = ctx.createRadialGradient(x2, y2, 0, x2, y2, 350);
+          g2.addColorStop(0, 'rgba(217, 70, 239, 0.3)');
+          g2.addColorStop(0.5, 'rgba(217, 70, 239, 0.15)');
+          g2.addColorStop(1, 'rgba(217, 70, 239, 0)');
+          ctx.fillStyle = g2; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          particles.forEach(p => { p.update(); p.draw(); });
+        }
+        function animate() { drawGradients(); requestAnimationFrame(animate); }
+        animate();
+      }
+    })();
+
+    // Application Logic
+
+    // UI Elements
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('file-input');
+    const selectBtn = document.getElementById('select-file-btn');
+    const fileNameDisplay = document.getElementById('file-name-display');
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const sections = {
+      upload: document.getElementById('upload-section'),
+      loading: document.getElementById('loading-section'),
+      results: document.getElementById('results-section')
+    };
+    const loadingText = document.getElementById('loading-text');
+
+    let selectedFile = null;
+    let globalExamData = [];
+
+    // Drag and Drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      dropzone.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropzone.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropzone.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight(e) {
+      dropzone.classList.add('border-violet-500', 'bg-violet-500/10');
+    }
+
+    function unhighlight(e) {
+      dropzone.classList.remove('border-violet-500', 'bg-violet-500/10');
+    }
+
+    dropzone.addEventListener('drop', handleDrop, false);
+    function handleDrop(e) {
+      let dt = e.dataTransfer;
+      let files = dt.files;
+      if (files.length) handleFile(files[0]);
+    }
+
+    dropzone.addEventListener('click', (e) => {
+      // Don't trigger if it's the input itself bubbling up
+      if (e.target.tagName.toLowerCase() === 'input') return;
+      fileInput.click();
+    });
+
+    // selectBtn click gets naturally propagated to dropzone because it is inside it,
+    // which triggers the fileInput.click() above. So we don't strictly need a separate
+    // handler for selectBtn calling fileInput, but let's be explicit and stop propagation
+    // to avoid any dual triggers.
+    selectBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      fileInput.click();
+    });
+
+    // Stop the hidden input taking clicks and looping them up
+    fileInput.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
+
+    fileInput.addEventListener('change', function (e) {
+      if (this.files && this.files.length > 0) {
+        handleFile(this.files[0]);
+      }
+    });
+
+    function handleFile(file) {
+      if (file.type !== 'application/pdf') {
+        alert("Please upload a PDF file.");
+        fileInput.value = '';
+        return;
+      }
+      if (file.size > 50 * 1024 * 1024) {
+        alert("File size too large (max 50MB).");
+        fileInput.value = '';
+        return;
+      }
+      selectedFile = file;
+      fileNameDisplay.textContent = file.name;
+      document.getElementById('file-size-display').textContent = (file.size / 1024 / 1024).toFixed(2) + " MB";
+      analyzeBtn.disabled = false;
+      fileInput.value = ''; // Reset input to allow selecting the same file again if needed
+    }
+
+    // PDF to Base64 (for small files)
+    const fileToBase64 = (file) => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    // Main Analyze Flow
+    analyzeBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      sections.upload.classList.add('hidden');
+      sections.loading.classList.remove('hidden');
+
+      const loadMessages = ["Reading PDF...", "Understanding context...", "Extracting concepts...", "Structuring notes..."];
+      let msgIdx = 0;
+      const msgInterval = setInterval(() => {
+        msgIdx = (msgIdx + 1) % loadMessages.length;
+        loadingText.textContent = loadMessages[msgIdx];
+      }, 2000);
+
+      try {
+        const apiKey = "AIzaSyBC30L-HlpnpnkAoNhum1a9Qfc66X--yVk";
+
+        // 1. Prepare payload
+        const base64Data = await fileToBase64(selectedFile);
+        const level = document.getElementById('education-level').value;
+
+        let prompt = `Analyze the attached lecture PDF. Education level: ${level}.
+        
+Return a single JSON object with EXACTLY this structure:
+{
+  "summary": {
+    "title": "Main Lecture Title",
+    "tldr": "2 sentence summary",
+    "overview": "Detailed overview paragraph",
+    "chapters": [{ "title": "Section title", "summary": "Section summary", "keyPoints": ["point 1", "point 2"] }]
+  },
+  "notes": "<h2>Main Topic</h2><p>Overview text.</p><ul><li>Key detail 1</li><li>Key detail 2</li></ul><h3>Subtopic</h3><p>Definition of <strong>Concept</strong>: meaning.</p> (Use ONLY valid HTML tags: h2, h3, p, ul, li, strong)",
+  "concepts": [{ "term": "Concept Name", "definition": "Brief definition", "topic": "Category" }],
+  "headings": ["Heading 1", "Heading 2"]
+}
+
+Ensure the notes HTML string is clean and well-structured. Output strictly valid JSON without any markdown formatting wrappers.`;
+
+        const payload = {
+          contents: [{
+            parts: [
+              { text: prompt },
+              { inlineData: { mimeType: "application/pdf", data: base64Data } }
+            ]
+          }],
+          generationConfig: {
+            temperature: 0.4,
+            responseMimeType: "application/json"
+          }
+        };
+
+        // 2. Call Gemini API via REST directly
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`API Error: ${res.status} - ${errText}`);
+        }
+
+        const data = await res.json();
+        if (!data.candidates || data.candidates.length === 0) {
+          throw new Error("No output from model.");
+        }
+        let resultText = data.candidates[0].content.parts[0].text;
+
+        // Clean up markdown markers if any
+        resultText = resultText.replace(/^```json/i, '').replace(/^```/i, '').replace(/```$/i, '').trim();
+
+        const resultObj = JSON.parse(resultText);
+
+        clearInterval(msgInterval);
+        populateResults(resultObj);
+
+        sections.loading.classList.add('hidden');
+        sections.results.classList.remove('hidden');
+
+      } catch (err) {
+        clearInterval(msgInterval);
+        alert("Failed to analyze PDF: " + err.message);
+        console.error(err);
+        sections.loading.classList.add('hidden');
+        sections.upload.classList.remove('hidden');
+      }
+    });
+
+    // Populate Results HTML
+    function populateResults(data) {
+      if (!data || !data.summary) return;
+      // Summary Tab
+      document.getElementById('res-title').textContent = data.summary.title || "Lecture Summary";
+      document.getElementById('res-tldr').textContent = data.summary.tldr || "No summary provided.";
+      document.getElementById('res-overview').textContent = data.summary.overview || "";
+
+      if (data.summary.chapters && Array.isArray(data.summary.chapters)) {
+        const chapHTML = data.summary.chapters.map(c => \`
+          <div class="border-l-2 border-violet-500 pl-4 py-1 mb-4">
+            <h4 class="font-bold text-slate-900 dark:text-white text-lg">\${c.title}</h4>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">\${c.summary}</p>
+            <ul class="list-disc pl-5 text-sm text-slate-700 dark:text-slate-300">
+              \${(c.keyPoints || []).map(p => \`<li>\${p}</li>\`).join('')}
+            </ul>
+          </div>
+        \`).join('');
+        document.getElementById('res-chapters').innerHTML = chapHTML;
+      }
+
+      // Notes Tab
+      document.getElementById('res-notes').innerHTML = data.notes || "";
+
+      // Concepts Tab
+      if (data.concepts && Array.isArray(data.concepts)) {
+        const concHTML = data.concepts.map(c => \`
+          <div class="glass-card p-5 rounded-2xl hover:-translate-y-1 transition-transform">
+            <div class="flex justify-between items-start mb-2">
+              <h4 class="font-bold text-violet-700 dark:text-violet-300 text-lg">\${c.term}</h4>
+              <span class="text-[10px] uppercase font-bold bg-black/10 dark:bg-white/10 px-2 py-1 rounded text-slate-600 dark:text-slate-400">\${c.topic || "General"}</span>
+            </div>
+            <p class="text-sm text-slate-700 dark:text-slate-300">\${c.definition}</p>
+          </div>
+        \`).join('');
+        document.getElementById('res-concepts-grid').innerHTML = concHTML;
+      }
+
+      // We don't save exam globally here anymore, since it's generated via the Exam tab
+      globalExamData = [];
+    }
+
+    // Tabs Logic
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        // Reset tabs
+        document.querySelectorAll('.nav-tab').forEach(t => {
+          t.classList.remove('bg-violet-200', 'dark:bg-violet-600/20', 'text-violet-700', 'dark:text-violet-300', 'border-violet-500/30', 'active');
+          t.classList.add('text-slate-600', 'dark:text-slate-400', 'hover:bg-black/5', 'dark:bg-white/5');
+        });
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+
+        // Activate Tab
+        const target = e.currentTarget;
+        target.classList.remove('text-slate-600', 'dark:text-slate-400', 'hover:bg-black/5', 'dark:bg-white/5');
+        target.classList.add('bg-violet-200', 'dark:bg-violet-600/20', 'text-violet-700', 'dark:text-violet-300', 'border-violet-500/30', 'active');
+        document.getElementById(target.dataset.target).classList.remove('hidden');
+      });
+    });
+
+    // Copy Notes
+    document.getElementById('copy-notes-btn').addEventListener('click', () => {
+      const text = document.getElementById('res-notes').innerText;
+      navigator.clipboard.writeText(text);
+      alert("Notes copied to clipboard!");
+    });
+
+    // NotebookLM Prompt Sync
+    const urlInput = document.getElementById('notebook-url');
+    const promptArea = document.getElementById('claude-prompt-text');
+    urlInput.addEventListener('input', () => {
+      const url = urlInput.value.trim() || "[Insert URL]";
+      promptArea.value = `Ask my NotebookLM skill to summarize this lecture: "Write a detailed study guide" using notebook URL: ${ url }`;
+    });
+    document.getElementById('copy-prompt-btn').addEventListener('click', () => {
+      navigator.clipboard.writeText(promptArea.value);
+      alert("Prompt copied! Paste it in Claude Code.");
+      // Select text as well
+      promptArea.select();
+    });
+
+    // Exam Runner Logic
+    let currentQuizIndex = 0;
+    let score = 0;
+
+    document.getElementById('start-exam-inline-btn').addEventListener('click', async () => {
+      if (!selectedFile) return alert("Original PDF file lost. Please re-upload.");
+      
+      const difficulty = document.getElementById('exam-difficulty').value;
+      const levelElement = document.getElementById('education-level');
+      const level = levelElement ? levelElement.value : 'University Level';
+
+      document.getElementById('exam-intro').classList.add('hidden');
+      document.getElementById('exam-loading-state').classList.remove('hidden');
+
+      try {
+        const apiKey = "AIzaSyBC30L-HlpnpnkAoNhum1a9Qfc66X--yVk"; 
+        const base64Data = await fileToBase64(selectedFile);
+        
+        let prompt = `Analyze the attached lecture PDF.Generate a 20 question mock exam for the student based on the material.
+Education level: ${ level }.
+Exam Difficulty: ${ difficulty }.
+
+Return a JSON array of exactly 20 objects with EXACTLY this structure:
+        [
+          {
+            "questionText": "What is...?",
+            "type": "MCQ",
+            "difficulty": "${difficulty}",
+            "answerOptions": ["A", "B", "C", "D"],
+            "correctAnswer": "A",
+            "topic": "Specific Topic Name",
+            "explanation": "Why A is correct"
+          }
+        ]
+Output strictly valid JSON without any markdown formatting wrappers.`;
+
+        const payload = {
+          contents: [{
+            parts: [
+              { text: prompt },
+              { inlineData: { mimeType: "application/pdf", data: base64Data } }
+            ]
+          }],
+          generationConfig: {
+            temperature: 0.5,
+            responseMimeType: "application/json"
+          }
+        };
+
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`API Error: ${res.status} - ${errText}`);
+      }
+
+      const data = await res.json();
+      if (!data.candidates || data.candidates.length === 0) {
+        throw new Error("No output from model.");
+      }
+
+      let resultText = data.candidates[0].content.parts[0].text;
+      resultText = resultText.replace(/^```json/i, '').replace(/^```/i, '').replace(/```$/i, '').trim();
+
+      // Save exam globally
+      globalExamData = JSON.parse(resultText);
+
+      document.getElementById('exam-loading-state').classList.add('hidden');
+      document.getElementById('exam-runner').classList.remove('hidden');
+
+      currentQuizIndex = 0;
+      score = 0;
+      renderCurrentQuestion();
+
+    } catch (err) {
+      document.getElementById('exam-loading-state').classList.add('hidden');
+      document.getElementById('exam-intro').classList.remove('hidden');
+      alert("Failed to generate exam: " + err.message);
+      console.error(err);
+    }
+    });
+
+    function renderCurrentQuestion() {
+      const q = globalExamData[currentQuizIndex];
+      document.getElementById('q-current').textContent = currentQuizIndex + 1;
+      document.getElementById('q-topic-badge').textContent = q.topic || q.difficulty;
+      document.getElementById('q-text').textContent = q.questionText;
+
+      const optsContainer = document.getElementById('q-options');
+      optsContainer.innerHTML = '';
+
+      const isTF = q.type === 'TrueFalse';
+      const options = isTF ? ['True', 'False'] : (q.answerOptions || []);
+
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = "w-full text-left p-4 rounded-xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:bg-white/10 transition-colors option-btn";
+        btn.innerHTML = `<div class="flex items-center gap-3"><div class="w-5 h-5 rounded-full border-2 border-slate-500 flex-shrink-0 status-circle"></div><span class="text-lg">${opt}</span></div>`;
+
+        btn.onclick = () => {
+          // Disable all
+          document.querySelectorAll('.option-btn').forEach(b => {
+            b.disabled = true;
+            b.classList.remove('hover:bg-black/10 dark:bg-white/10');
+          });
+          const isCorrect = opt === q.correctAnswer;
+          if (isCorrect) {
+            score++;
+            btn.className = "w-full text-left p-4 rounded-xl transition-colors option-btn border border-emerald-500 bg-emerald-500/20";
+            btn.querySelector('.status-circle').className = "w-5 h-5 rounded-full flex-shrink-0 status-circle bg-emerald-500";
+          } else {
+            btn.className = "w-full text-left p-4 rounded-xl transition-colors option-btn border border-rose-500 bg-rose-500/20";
+            btn.querySelector('.status-circle').className = "w-5 h-5 rounded-full flex-shrink-0 status-circle bg-rose-500";
+
+            // Highlight correct one
+            document.querySelectorAll('.option-btn').forEach(ob => {
+              if (ob.innerText.trim() === String(q.correctAnswer).trim()) {
+                ob.className = "w-full text-left p-4 rounded-xl transition-colors option-btn border border-emerald-500 bg-emerald-500/10";
+              }
+            });
+          }
+
+          document.getElementById('q-next').disabled = false;
+        };
+        optsContainer.appendChild(btn);
+      });
+
+      document.getElementById('q-next').disabled = true;
+    }
+
+    document.getElementById('q-next').addEventListener('click', () => {
+      currentQuizIndex++;
+      if (currentQuizIndex >= globalExamData.length) {
+        // Finish
+        document.getElementById('exam-runner').classList.add('hidden');
+        document.getElementById('exam-results-view').classList.remove('hidden');
+        document.getElementById('exam-score').textContent = score;
+        document.getElementById('exam-percentage').textContent = Math.round((score / globalExamData.length) * 100) + "%";
+      } else {
+        renderCurrentQuestion();
+      }
+    });
+
+    // Theme Toggle
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    if (themeToggleBtn) {
+      themeToggleBtn.addEventListener('click', () => {
+        document.documentElement.classList.toggle('dark');
+        if (document.documentElement.classList.contains('dark')) {
+          localStorage.theme = 'dark';
+        } else {
+          localStorage.theme = 'light';
+        }
+      });
+    }
+
+  </script>
+</body>
+
+</html>
