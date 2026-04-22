@@ -693,7 +693,7 @@
       reader.readAsDataURL(file);
     });
 
-    // Main Analyze Flow (Offline Heuristic Version)
+    // Main Analyze Flow (Improved Offline Heuristic Version)
     analyzeBtn.addEventListener('click', async () => {
       if (!selectedFile) return;
 
@@ -720,32 +720,51 @@
 
         // 2. Process with Compromise (Heuristics)
         const doc = nlp(fullText);
-        const level = document.getElementById('education-level').value;
         
+        // Better Heuristics for "Lots of Data"
         const sentences = doc.sentences().out('array');
-        const importantSentences = sentences.filter(s => 
-          s.includes(' is ') || s.includes(' are ') || s.includes(' means ') || s.includes(' defined ')
-        ).slice(0, 15);
+        
+        // Definitions: lines containing common definition markers
+        const definitions = sentences.filter(s => 
+          / (is|are|means|refers to|defined as|describes) /.test(s.toLowerCase())
+        );
 
-        const nouns = Array.from(new Set(doc.nouns().out('array').filter(n => n.length > 3))).slice(0, 20);
+        // Key Points: look for lines that look like list items or short impactful sentences
+        const keyPoints = sentences.filter(s => 
+          s.length > 30 && s.length < 150 && !definitions.includes(s)
+        ).slice(0, 30);
+
+        // Concepts: All nouns that appear frequently
+        const nouns = doc.nouns().out('frequency')
+          .filter(n => n.text.length > 3 && n.count > 1)
+          .map(n => n.text);
         
         // 3. Build Result Object
         const resultObj = {
           summary: {
             title: selectedFile.name.replace(".pdf", ""),
-            tldr: importantSentences.slice(0, 2).join(". ") || "No summary found.",
-            overview: importantSentences.slice(2, 5).join(". ") || "General overview of the document content.",
+            tldr: definitions.slice(0, 3).join(". ") || "Summary of the main lecture concepts.",
+            overview: keyPoints.slice(0, 5).join(". ") || "General overview of the document content.",
             chapters: [
               {
-                title: "Core Content",
-                summary: "Key findings from the document analysis.",
-                keyPoints: importantSentences.slice(5, 10)
+                title: "Key Definitions",
+                summary: "Essential terminology found in the lecture.",
+                keyPoints: definitions.slice(3, 15)
+              },
+              {
+                title: "Detailed Concepts",
+                summary: "Specific details and context extracted from the material.",
+                keyPoints: keyPoints.slice(5, 20)
               }
             ]
           },
-          notes: `<h2>Analysis Summary</h2><p>${importantSentences.slice(0, 3).join(". ")}</p><h3>Key Points</h3><ul>${importantSentences.slice(3, 8).map(s => `<li>${s}</li>`).join("")}</ul>`,
-          concepts: nouns.slice(0, 10).map(n => ({ term: n, definition: "Extracted concept from document.", topic: "General" })),
-          headings: ["Overview", "Detailed Analysis"]
+          notes: `<h2>Lecture Analysis</h2><p>${definitions.slice(0, 2).join(". ")}</p><h3>Core Concepts</h3><ul>${keyPoints.slice(0, 10).map(s => `<li>${s}</li>`).join("")}</ul><h3>Additional Context</h3><p>${keyPoints.slice(10, 15).join(". ")}</p>`,
+          concepts: nouns.slice(0, 25).map(n => ({ 
+            term: n, 
+            definition: definitions.find(d => d.toLowerCase().includes(n.toLowerCase())) || "A key term identified in the lecture material.",
+            topic: "Lecture Concept" 
+          })),
+          headings: ["Overview", "Key Definitions", "Detailed Analysis"]
         };
 
         // 4. Populate and Show
@@ -838,6 +857,7 @@
       const url = urlInput.value.trim() || "[Insert URL]";
       promptArea.value = `Ask my NotebookLM skill to summarize this lecture: "Write a detailed study guide" using notebook URL: ${ url }`;
     });
+
     document.getElementById('copy-prompt-btn').addEventListener('click', () => {
       navigator.clipboard.writeText(promptArea.value);
       alert("Prompt copied! Paste it in Claude Code.");
@@ -845,10 +865,9 @@
       promptArea.select();
     });
 
-    // Exam Runner Logic
+    // Exam Runner Logic (Offline Version)
     let currentQuizIndex = 0;
     let score = 0;
-
     document.getElementById('start-exam-inline-btn').addEventListener('click', async () => {
       if (!selectedFile) return alert("Original PDF file lost. Please re-upload.");
       
@@ -860,75 +879,88 @@
       document.getElementById('exam-loading-state').classList.remove('hidden');
 
       try {
-        const apiKey = "AIzaSyBC30L-HlpnpnkAoNhum1a9Qfc66X--yVk"; 
-        const base64Data = await fileToBase64(selectedFile);
+        // 1. Extract Text
+        const arrayBuffer = await selectedFile.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let fullText = "";
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          fullText += textContent.items.map(item => item.str).join(" ") + "\n";
+        }
+
+        const doc = nlp(fullText);
+        const allNouns = doc.nouns().out('array').filter(n => n.length > 3);
+        const uniqueNouns = Array.from(new Set(allNouns));
+        const sentences = doc.sentences().out('array').filter(s => s.length > 30 && s.length < 150);
         
-        let prompt = `Analyze the attached lecture PDF.Generate a 20 question mock exam for the student based on the material.
-Education level: ${ level }.
-Exam Difficulty: ${ difficulty }.
-
-Return a JSON array of exactly 20 objects with EXACTLY this structure:
-        [
-          {
-            "questionText": "What is...?",
-            "type": "MCQ",
-            "difficulty": "${difficulty}",
-            "answerOptions": ["A", "B", "C", "D"],
-            "correctAnswer": "A",
-            "topic": "Specific Topic Name",
-            "explanation": "Why A is correct"
+        const questions = [];
+        let idCounter = 1;
+        
+        for (const sentence of sentences) {
+          if (questions.length >= 10) break; // Start with 10 for speed
+          
+          const sDoc = nlp(sentence);
+          const nouns = sDoc.nouns().out('array');
+          
+          if (nouns.length > 0 && Math.random() > 0.4) {
+            const targetNoun = nouns[0];
+            const questionText = sentence.replace(new RegExp(targetNoun, 'gi'), "______");
+            
+            const distractors = [];
+            while(distractors.length < 3) {
+              const randomNoun = uniqueNouns[Math.floor(Math.random() * uniqueNouns.length)];
+              if (randomNoun && randomNoun.toLowerCase() !== targetNoun.toLowerCase() && !distractors.includes(randomNoun)) {
+                distractors.push(randomNoun);
+              }
+            }
+            const options = [targetNoun, ...distractors].sort(() => Math.random() - 0.5);
+            
+            questions.push({
+              questionText: questionText,
+              type: "MCQ",
+              difficulty: difficulty,
+              answerOptions: options,
+              correctAnswer: targetNoun,
+              topic: "General",
+              explanation: `Based on the lecture text: "${sentence}"`
+            });
+          } else {
+            let isTrue = Math.random() > 0.5;
+            let qText = sentence;
+            if (!isTrue) {
+              if (qText.includes(" is ")) qText = qText.replace(" is ", " is not ");
+              else if (qText.includes(" are ")) qText = qText.replace(" are ", " are not ");
+              else isTrue = true;
+            }
+            questions.push({
+              questionText: qText,
+              type: "TrueFalse",
+              difficulty: difficulty,
+              answerOptions: ["True", "False"],
+              correctAnswer: isTrue ? "True" : "False",
+              topic: "General",
+              explanation: isTrue ? "This statement matches the lecture text." : "The original text was modified."
+            });
           }
-        ]
-Output strictly valid JSON without any markdown formatting wrappers.`;
+        }
 
-        const payload = {
-          contents: [{
-            parts: [
-              { text: prompt },
-              { inlineData: { mimeType: "application/pdf", data: base64Data } }
-            ]
-          }],
-          generationConfig: {
-            temperature: 0.5,
-            responseMimeType: "application/json"
-          }
-        };
+        if (questions.length === 0) throw new Error("Could not find enough content to generate questions.");
 
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-        method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+        globalExamData = questions;
+        document.getElementById('exam-loading-state').classList.add('hidden');
+        document.getElementById('exam-runner').classList.remove('hidden');
 
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`API Error: ${res.status} - ${errText}`);
+        currentQuizIndex = 0;
+        score = 0;
+        renderCurrentQuestion();
+
+      } catch (err) {
+        document.getElementById('exam-loading-state').classList.add('hidden');
+        document.getElementById('exam-intro').classList.remove('hidden');
+        alert("Failed to generate offline exam: " + err.message);
+        console.error(err);
       }
-
-      const data = await res.json();
-      if (!data.candidates || data.candidates.length === 0) {
-        throw new Error("No output from model.");
-      }
-
-      let resultText = data.candidates[0].content.parts[0].text;
-      resultText = resultText.replace(/^```json/i, '').replace(/^```/i, '').replace(/```$/i, '').trim();
-
-      // Save exam globally
-      globalExamData = JSON.parse(resultText);
-
-      document.getElementById('exam-loading-state').classList.add('hidden');
-      document.getElementById('exam-runner').classList.remove('hidden');
-
-      currentQuizIndex = 0;
-      score = 0;
-      renderCurrentQuestion();
-
-    } catch (err) {
-      document.getElementById('exam-loading-state').classList.add('hidden');
-      document.getElementById('exam-intro').classList.remove('hidden');
-      alert("Failed to generate exam: " + err.message);
-      console.error(err);
-    }
     });
 
     function renderCurrentQuestion() {
