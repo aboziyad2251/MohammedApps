@@ -7,7 +7,7 @@ import { Question, ExamMetadata, AnalysisFeedback, ExamResult, QuestionType, Dif
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 // Helper: Extract text from PDF
-export const extractTextFromPDF = async (file: File): Promise<string> => {
+export let extractTextFromPDF = async (file: File): Promise<string> => {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let fullText = "";
@@ -99,7 +99,7 @@ export const generateExamFromPDF = async (file: File, lang: Language, level: Edu
             });
         } else if (sentences.length > 0) { // 30% chance of T/F
             // Create a T/F question
-            const isTrue = Math.random() > 0.5;
+            let isTrue = Math.random() > 0.5;
             let text = sentence;
             
             if (!isTrue) {
