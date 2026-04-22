@@ -9,12 +9,18 @@ import ExplanationView from './components/ExplanationView';
 import { generateExamFromPDF, analyzePerformance, explainPDFContent } from './services/geminiService';
 import { BrainCircuit, GraduationCap, X, Moon, Sun, Languages } from 'lucide-react';
 import { translations } from './locales';
+import MaintenanceScreen from './components/MaintenanceScreen';
+
+const MAINTENANCE_MODE = import.meta.env.VITE_MAINTENANCE_MODE === 'true';
 
 const App: React.FC = () => {
   const [step, setStep] = useState<AppStep>(AppStep.Upload);
   const [loadingText, setLoadingText] = useState('');
   const [isDark, setIsDark] = useState<boolean>(false);
   const [language, setLanguage] = useState<Language>('en');
+  const [adminBypass, setAdminBypass] = useState<boolean>(
+    () => sessionStorage.getItem('adminBypass') === 'true'
+  );
   
   // Data State
   const [currentPdf, setCurrentPdf] = useState<File | null>(null);
@@ -186,6 +192,18 @@ const App: React.FC = () => {
       handleRestart();
     }
   };
+
+  if (MAINTENANCE_MODE && !adminBypass) {
+    return (
+      <MaintenanceScreen
+        lang={language}
+        onAdminBypass={() => {
+          sessionStorage.setItem('adminBypass', 'true');
+          setAdminBypass(true);
+        }}
+      />
+    );
+  }
 
   return (
     <div className={`min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col transition-colors duration-300 ${language === 'ar' ? 'font-sans' : 'font-sans'}`}>
