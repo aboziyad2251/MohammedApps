@@ -773,15 +773,15 @@
       document.getElementById('res-overview').textContent = data.summary.overview || "";
 
       if (data.summary.chapters && Array.isArray(data.summary.chapters)) {
-        const chapHTML = data.summary.chapters.map(c => \`
+        const chapHTML = data.summary.chapters.map(c => `
           <div class="border-l-2 border-violet-500 pl-4 py-1 mb-4">
-            <h4 class="font-bold text-slate-900 dark:text-white text-lg">\${c.title}</h4>
-            <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">\${c.summary}</p>
+            <h4 class="font-bold text-slate-900 dark:text-white text-lg">${c.title}</h4>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mb-2">${c.summary}</p>
             <ul class="list-disc pl-5 text-sm text-slate-700 dark:text-slate-300">
-              \${(c.keyPoints || []).map(p => \`<li>\${p}</li>\`).join('')}
+              ${(c.keyPoints || []).map(p => `<li>${p}</li>`).join('')}
             </ul>
           </div>
-        \`).join('');
+        `).join('');
         document.getElementById('res-chapters').innerHTML = chapHTML;
       }
 
@@ -790,15 +790,15 @@
 
       // Concepts Tab
       if (data.concepts && Array.isArray(data.concepts)) {
-        const concHTML = data.concepts.map(c => \`
+        const concHTML = data.concepts.map(c => `
           <div class="glass-card p-5 rounded-2xl hover:-translate-y-1 transition-transform">
             <div class="flex justify-between items-start mb-2">
-              <h4 class="font-bold text-violet-700 dark:text-violet-300 text-lg">\${c.term}</h4>
-              <span class="text-[10px] uppercase font-bold bg-black/10 dark:bg-white/10 px-2 py-1 rounded text-slate-600 dark:text-slate-400">\${c.topic || "General"}</span>
+              <h4 class="font-bold text-violet-700 dark:text-violet-300 text-lg">${c.term}</h4>
+              <span class="text-[10px] uppercase font-bold bg-black/10 dark:bg-white/10 px-2 py-1 rounded text-slate-600 dark:text-slate-400">${c.topic || "General"}</span>
             </div>
-            <p class="text-sm text-slate-700 dark:text-slate-300">\${c.definition}</p>
+            <p class="text-sm text-slate-700 dark:text-slate-300">${c.definition}</p>
           </div>
-        \`).join('');
+        `).join('');
         document.getElementById('res-concepts-grid').innerHTML = concHTML;
       }
 
