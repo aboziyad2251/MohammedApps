@@ -6,7 +6,7 @@ import StudentForm from './components/StudentForm';
 import ExamRunner from './components/ExamRunner';
 import ResultsView from './components/ResultsView';
 import ExplanationView from './components/ExplanationView';
-import { generateExamFromPDF, analyzePerformance, explainPDFContent } from './services/geminiService';
+import { generateExamFromPDF, analyzePerformance, explainPDFContent } from './services/offlineGenerator';
 import { BrainCircuit, GraduationCap, X, Moon, Sun, Languages } from 'lucide-react';
 import { translations } from './locales';
 import MaintenanceScreen from './components/MaintenanceScreen';

@@ -161,6 +161,13 @@
 
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- PDF.js and Compromise for Offline Analysis -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.min.js"></script>
+  <script src="https://unpkg.com/compromise"></script>
+  <script>
+    // Setup PDF.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.js';
+  </script>
 </head>
 
 <body
@@ -679,80 +686,62 @@
       reader.readAsDataURL(file);
     });
 
-    // Main Analyze Flow
+    // Main Analyze Flow (Offline Heuristic Version)
     analyzeBtn.addEventListener('click', async () => {
       if (!selectedFile) return;
 
       sections.upload.classList.add('hidden');
       sections.loading.classList.remove('hidden');
 
-      const loadMessages = ["Reading PDF...", "Understanding context...", "Extracting concepts...", "Structuring notes..."];
+      const loadMessages = ["Reading PDF locally...", "Analyzing patterns...", "Extracting concepts...", "Structuring notes..."];
       let msgIdx = 0;
       const msgInterval = setInterval(() => {
         msgIdx = (msgIdx + 1) % loadMessages.length;
         loadingText.textContent = loadMessages[msgIdx];
-      }, 2000);
+      }, 1500);
 
       try {
-        const apiKey = "AIzaSyBC30L-HlpnpnkAoNhum1a9Qfc66X--yVk";
+        // 1. Extract Text Locally
+        const arrayBuffer = await selectedFile.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let fullText = "";
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          fullText += textContent.items.map(item => item.str).join(" ") + "\n";
+        }
 
-        // 1. Prepare payload
-        const base64Data = await fileToBase64(selectedFile);
+        // 2. Process with Compromise (Heuristics)
+        const doc = nlp(fullText);
         const level = document.getElementById('education-level').value;
-
-        let prompt = `Analyze the attached lecture PDF. Education level: ${level}.
         
-Return a single JSON object with EXACTLY this structure:
-{
-  "summary": {
-    "title": "Main Lecture Title",
-    "tldr": "2 sentence summary",
-    "overview": "Detailed overview paragraph",
-    "chapters": [{ "title": "Section title", "summary": "Section summary", "keyPoints": ["point 1", "point 2"] }]
-  },
-  "notes": "<h2>Main Topic</h2><p>Overview text.</p><ul><li>Key detail 1</li><li>Key detail 2</li></ul><h3>Subtopic</h3><p>Definition of <strong>Concept</strong>: meaning.</p> (Use ONLY valid HTML tags: h2, h3, p, ul, li, strong)",
-  "concepts": [{ "term": "Concept Name", "definition": "Brief definition", "topic": "Category" }],
-  "headings": ["Heading 1", "Heading 2"]
-}
+        const sentences = doc.sentences().out('array');
+        const importantSentences = sentences.filter(s => 
+          s.includes(' is ') || s.includes(' are ') || s.includes(' means ') || s.includes(' defined ')
+        ).slice(0, 15);
 
-Ensure the notes HTML string is clean and well-structured. Output strictly valid JSON without any markdown formatting wrappers.`;
-
-        const payload = {
-          contents: [{
-            parts: [
-              { text: prompt },
-              { inlineData: { mimeType: "application/pdf", data: base64Data } }
+        const nouns = Array.from(new Set(doc.nouns().out('array').filter(n => n.length > 3))).slice(0, 20);
+        
+        // 3. Build Result Object
+        const resultObj = {
+          summary: {
+            title: selectedFile.name.replace(".pdf", ""),
+            tldr: importantSentences.slice(0, 2).join(". ") || "No summary found.",
+            overview: importantSentences.slice(2, 5).join(". ") || "General overview of the document content.",
+            chapters: [
+              {
+                title: "Core Content",
+                summary: "Key findings from the document analysis.",
+                keyPoints: importantSentences.slice(5, 10)
+              }
             ]
-          }],
-          generationConfig: {
-            temperature: 0.4,
-            responseMimeType: "application/json"
-          }
+          },
+          notes: `<h2>Analysis Summary</h2><p>${importantSentences.slice(0, 3).join(". ")}</p><h3>Key Points</h3><ul>${importantSentences.slice(3, 8).map(s => `<li>${s}</li>`).join("")}</ul>`,
+          concepts: nouns.slice(0, 10).map(n => ({ term: n, definition: "Extracted concept from document.", topic: "General" })),
+          headings: ["Overview", "Detailed Analysis"]
         };
 
-        // 2. Call Gemini API via REST directly
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(`API Error: ${res.status} - ${errText}`);
-        }
-
-        const data = await res.json();
-        if (!data.candidates || data.candidates.length === 0) {
-          throw new Error("No output from model.");
-        }
-        let resultText = data.candidates[0].content.parts[0].text;
-
-        // Clean up markdown markers if any
-        resultText = resultText.replace(/^```json/i, '').replace(/^```/i, '').replace(/```$/i, '').trim();
-
-        const resultObj = JSON.parse(resultText);
-
+        // 4. Populate and Show
         clearInterval(msgInterval);
         populateResults(resultObj);
 
@@ -761,7 +750,7 @@ Ensure the notes HTML string is clean and well-structured. Output strictly valid
 
       } catch (err) {
         clearInterval(msgInterval);
-        alert("Failed to analyze PDF: " + err.message);
+        alert("Failed to analyze PDF locally: " + err.message);
         console.error(err);
         sections.loading.classList.add('hidden');
         sections.upload.classList.remove('hidden');
