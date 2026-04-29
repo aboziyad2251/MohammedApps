@@ -2,8 +2,7 @@
 import { GoogleGenAI, Type, Schema, GenerateContentResponse } from "@google/genai";
 import { Question, ExamMetadata, AnalysisFeedback, ExamResult, QuestionType, Difficulty, Language, EducationLevel, ExplanationData } from "../types";
 
-// Using gemini-3-flash-preview for text/reasoning capabilities
-const MODEL_NAME = "gemini-3-flash-preview";
+const MODEL_NAME = "gemini-1.5-flash";
 const VEO_MODEL = "veo-3.1-fast-generate-preview";
 
 // Helper to convert File to Base64

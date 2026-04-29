@@ -6,7 +6,7 @@ import StudentForm from './components/StudentForm';
 import ExamRunner from './components/ExamRunner';
 import ResultsView from './components/ResultsView';
 import ExplanationView from './components/ExplanationView';
-import { generateExamFromPDF, analyzePerformance, explainPDFContent } from './services/offlineGenerator';
+import { generateExamFromPDF, analyzePerformance, explainPDFContent } from './services/claudeService';
 import { BrainCircuit, GraduationCap, X, Moon, Sun, Languages } from 'lucide-react';
 import { translations } from './locales';
 import MaintenanceScreen from './components/MaintenanceScreen';
@@ -81,9 +81,9 @@ const App: React.FC = () => {
       setMetadata(data.metadata);
       setQuestions(data.questions);
       setStep(AppStep.StudentInfo);
-    } catch (error) {
-      console.error(error);
-      alert("Failed to generate exam. Please check your PDF and try again.");
+    } catch (error: any) {
+      console.error("Exam generation error:", error);
+      alert(`Failed to generate exam.\n\nError: ${error?.message || String(error)}`);
       setStep(AppStep.Upload);
     }
   };
