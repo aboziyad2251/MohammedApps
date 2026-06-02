@@ -3,11 +3,37 @@ import nlp from 'compromise';
 import { Question, ExamMetadata, AnalysisFeedback, ExamResult, QuestionType, Difficulty, Language, EducationLevel, ExplanationData } from "../types";
 
 // Setup PDF.js worker using CDN to avoid server MIME-type configuration issues
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.6.205/build/pdf.worker.min.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.6.205/build/pdf.worker.min.js';
+
+// Helper to read file as ArrayBuffer using FileReader (highly compatible)
+const readFileAsArrayBuffer = (file: File): Promise<ArrayBuffer> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (reader.result instanceof ArrayBuffer) {
+        resolve(reader.result);
+      } else {
+        reject(new Error("Failed to read file as ArrayBuffer"));
+      }
+    };
+    reader.onerror = () => reject(reader.error || new Error("Unknown FileReader error"));
+    reader.readAsArrayBuffer(file);
+  });
+};
 
 // Helper: Extract text from PDF
 export let extractTextFromPDF = async (file: File): Promise<string> => {
-    const arrayBuffer = await file.arrayBuffer();
+    let arrayBuffer: ArrayBuffer;
+    if (typeof file.arrayBuffer === 'function') {
+        try {
+            arrayBuffer = await file.arrayBuffer();
+        } catch (e) {
+            arrayBuffer = await readFileAsArrayBuffer(file);
+        }
+    } else {
+        arrayBuffer = await readFileAsArrayBuffer(file);
+    }
+
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let fullText = "";
     
@@ -146,7 +172,8 @@ export const analyzePerformance = async (result: ExamResult, metadata: ExamMetad
     
     // Analyze topic performance
     for (const [topic, score] of Object.entries(result.topicPerformance)) {
-        if (score >= 70) strengths.push(`Strong performance in ${topic}.`);
+        const percentage = score.total > 0 ? (score.correct / score.total) * 100 : 0;
+        if (percentage >= 70) strengths.push(`Strong performance in ${topic}.`);
         else weaknesses.push(`Needs more review in ${topic}.`);
     }
     
