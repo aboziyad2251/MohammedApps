@@ -6,6 +6,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lecture Analyzer - Techarja Exam Builder</title>
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- PWA Manifest & Meta Tags -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#7c3aed">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="/assets/icon-192.svg">
+
+  <!-- Auto-detect Device Script -->
+  <script>
+    (function () {
+      function detectDevice() {
+        var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+        document.documentElement.setAttribute('data-device', isMobile ? 'mobile' : 'desktop');
+        if (isMobile) {
+          document.documentElement.classList.add('device-mobile');
+        } else {
+          document.documentElement.classList.remove('device-mobile');
+        }
+      }
+      detectDevice();
+      window.addEventListener('resize', detectDevice);
+    })();
+  </script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -156,6 +180,39 @@
       background: rgba(6, 182, 212, 0.1);
       padding: 0.1rem 0.4rem;
       border-radius: 0.25rem;
+    }
+
+    /* Mobile Overrides */
+    @media (max-width: 640px) {
+      header {
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 12px !important;
+        padding: 12px !important;
+      }
+      header h1 {
+        position: static !important;
+        transform: none !important;
+        text-align: center !important;
+        margin: 4px 0 !important;
+        font-size: 1.5rem !important;
+      }
+      header a {
+        width: 100% !important;
+        justify-content: center !important;
+      }
+      #dropzone {
+        padding: 24px 12px !important;
+      }
+      #analyze-btn {
+        width: 100% !important;
+      }
+      .nav-tab {
+        flex: 1 1 auto !important;
+        text-align: center !important;
+        justify-content: center !important;
+        padding: 8px 12px !important;
+      }
     }
   </style>
 

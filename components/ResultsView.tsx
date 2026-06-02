@@ -63,7 +63,7 @@ const ResultsView: React.FC<ResultsViewProps> = ({ result, metadata, analysis, s
         {/* Performance Chart */}
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
           <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">{t.topicPerf}</h3>
-          <div className="h-64" dir="ltr">
+          <div className="h-64 w-full overflow-hidden" dir="ltr">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} layout="vertical" margin={{ left: 20 }}>
                 <XAxis type="number" domain={[0, 100]} hide />

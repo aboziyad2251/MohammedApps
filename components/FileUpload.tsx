@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Upload, AlertCircle, School, BookOpen, PlayCircle, BarChart } from 'lucide-react';
 import { translations } from '../locales';
 import { Language, EducationLevel, Difficulty } from '../types';
@@ -15,14 +15,11 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isProcessing, lan
   const [dragActive, setDragActive] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState<EducationLevel>(EducationLevel.University);
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>(Difficulty.Medium);
-  const [actionType, setActionType] = useState<'explain' | 'exam' | null>(null);
   
-  const inputRef = useRef<HTMLInputElement>(null);
   const t = translations[lang].uploadStep;
 
-  const handleFiles = async (files: FileList | null) => {
+  const handleFiles = async (files: FileList | null, mode: 'explain' | 'exam') => {
     if (!files || files.length === 0) return;
-    const mode = actionType || 'exam';
 
     const file = files[0];
     if (file.type !== 'application/pdf') {
@@ -37,7 +34,6 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isProcessing, lan
     setError(null);
     try {
       onFileSelect(file, selectedLevel, selectedDifficulty, mode);
-      setActionType(null); 
     } catch (e) {
       setError(t.errorProcess);
     }
@@ -47,9 +43,8 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isProcessing, lan
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    setActionType('exam');
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFiles(e.dataTransfer.files);
+      handleFiles(e.dataTransfer.files, 'exam');
     }
   };
 
@@ -61,11 +56,6 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isProcessing, lan
     } else if (e.type === "dragleave") {
       setDragActive(false);
     }
-  };
-
-  const handleButtonClick = (type: 'explain' | 'exam') => {
-    setActionType(type);
-    inputRef.current?.click();
   };
 
   return (
@@ -143,11 +133,18 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isProcessing, lan
         onDrop={handleDrop}
       >
         <input 
-          ref={inputRef}
+          id="file-upload-explain"
           type="file" 
           accept="application/pdf"
           className="hidden"
-          onChange={(e) => handleFiles(e.target.files)}
+          onChange={(e) => handleFiles(e.target.files, 'explain')}
+        />
+        <input 
+          id="file-upload-exam"
+          type="file" 
+          accept="application/pdf"
+          className="hidden"
+          onChange={(e) => handleFiles(e.target.files, 'exam')}
         />
         
         <div className="flex flex-col items-center justify-center space-y-6">
@@ -169,22 +166,20 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isProcessing, lan
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm mx-auto pt-4">
-            <button
-              onClick={() => handleButtonClick('explain')}
-              disabled={isProcessing}
-              className="flex-1 flex items-center justify-center px-6 py-3 text-sm font-semibold text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-xl hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-all transform hover:-translate-y-0.5 disabled:opacity-50"
+            <label
+              htmlFor={isProcessing ? undefined : "file-upload-explain"}
+              className={`flex-1 flex items-center justify-center px-6 py-3 text-sm font-semibold text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-xl hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-all transform hover:-translate-y-0.5 cursor-pointer select-none ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
             >
               <BookOpen className="w-4 h-4 mr-2 rtl:ml-2" />
               {t.explainBtn}
-            </button>
-            <button
-              onClick={() => handleButtonClick('exam')}
-              disabled={isProcessing}
-              className="flex-1 flex items-center justify-center px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 dark:from-violet-500 dark:to-fuchsia-500 rounded-xl hover:shadow-lg hover:shadow-violet-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:-translate-y-0.5"
+            </label>
+            <label
+              htmlFor={isProcessing ? undefined : "file-upload-exam"}
+              className={`flex-1 flex items-center justify-center px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-violet-600 to-fuchsia-600 dark:from-violet-500 dark:to-fuchsia-500 rounded-xl hover:shadow-lg hover:shadow-violet-500/30 transition-all transform hover:-translate-y-0.5 cursor-pointer select-none ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
             >
               <PlayCircle className="w-4 h-4 mr-2 rtl:ml-2" />
               {t.createExamBtn}
-            </button>
+            </label>
           </div>
         </div>
 

@@ -113,7 +113,8 @@ export const translations = {
       explaining: "Analyzing Book Content..."
     },
     common: {
-      quitConfirm: "Are you sure you want to quit the current exam session? All progress will be lost."
+      quitConfirm: "Are you sure you want to quit the current exam session? All progress will be lost.",
+      backToDashboard: "Back to Dashboard"
     },
     pdf: {
       reportTitle: "Detailed Question Review",
@@ -234,7 +235,8 @@ export const translations = {
       explaining: "جارٍ تحليل محتوى الكتاب..."
     },
     common: {
-      quitConfirm: "هل أنت متأكد من رغبتك في إنهاء الجلسة الحالية؟ سيتم فقدان جميع البيانات."
+      quitConfirm: "هل أنت متأكد من رغبتك في إنهاء الجلسة الحالية؟ سيتم فقدان جميع البيانات.",
+      backToDashboard: "الرجوع إلى لوحة التحكم"
     },
     pdf: {
       reportTitle: "مراجعة تفصيلية للأسئلة",

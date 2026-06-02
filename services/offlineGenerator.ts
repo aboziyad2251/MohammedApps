@@ -1,10 +1,9 @@
 import * as pdfjsLib from 'pdfjs-dist';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 import nlp from 'compromise';
 import { Question, ExamMetadata, AnalysisFeedback, ExamResult, QuestionType, Difficulty, Language, EducationLevel, ExplanationData } from "../types";
 
-// Setup PDF.js worker using Vite asset loader
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+// Setup PDF.js worker using CDN to avoid server MIME-type configuration issues
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@5.6.205/build/pdf.worker.min.mjs';
 
 // Helper: Extract text from PDF
 export let extractTextFromPDF = async (file: File): Promise<string> => {

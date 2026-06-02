@@ -181,10 +181,10 @@ const ExamRunner: React.FC<ExamRunnerProps> = ({ questions, onComplete, lang, ti
                 </div>
             </div>
 
-            <div className="flex items-center justify-between md:justify-end gap-3">
+            <div className="flex items-center justify-between md:justify-end flex-wrap gap-2 w-full md:w-auto">
                 
                 {/* Real-time Stats */}
-                <div className="flex items-center space-x-3 rtl:space-x-reverse bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 shadow-sm">
+                <div className="flex items-center space-x-2.5 rtl:space-x-reverse bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 shadow-sm text-sm">
                     <div className="flex items-center text-green-600 dark:text-green-500 font-bold" title="Correct Answers">
                         <CheckCircle2 className="w-5 h-5 mr-1.5 rtl:ml-1.5" />
                         <span>{correctCount}</span>
@@ -198,12 +198,12 @@ const ExamRunner: React.FC<ExamRunnerProps> = ({ questions, onComplete, lang, ti
 
                 {/* Timer Display */}
                 {timerEnabled && (
-                    <div className={`flex items-center space-x-2 rtl:space-x-reverse px-4 py-2 rounded-xl font-mono font-bold text-lg shadow-sm border
+                    <div className={`flex items-center space-x-1.5 rtl:space-x-reverse px-3 py-1.5 rounded-xl font-mono font-bold text-base shadow-sm border
                         ${timeLeft < 60 
                             ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-100 dark:border-red-800' 
                             : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700'}`
                     }>
-                        <Timer className={`w-5 h-5 ${timeLeft < 60 ? 'animate-pulse' : ''}`} />
+                        <Timer className={`w-4 h-4 ${timeLeft < 60 ? 'animate-pulse' : ''}`} />
                         <span>{formatTime(timeLeft)}</span>
                     </div>
                 )}
@@ -212,10 +212,10 @@ const ExamRunner: React.FC<ExamRunnerProps> = ({ questions, onComplete, lang, ti
                 <button 
                     type="button"
                     onClick={onQuit}
-                    className="flex items-center justify-center w-10 h-10 md:w-auto md:h-auto md:space-x-1.5 md:rtl:space-x-reverse md:px-3 md:py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shadow-sm"
+                    className="flex items-center justify-center w-9 h-9 md:w-auto md:h-auto md:space-x-1.5 md:rtl:space-x-reverse md:px-3 md:py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors shadow-sm"
                     title={t.quitBtn}
                 >
-                    <LogOut className="w-5 h-5" />
+                    <LogOut className="w-4 h-4" />
                     <span className="hidden md:inline font-semibold text-sm">{t.quitBtn}</span>
                 </button>
             </div>
@@ -255,17 +255,17 @@ const ExamRunner: React.FC<ExamRunnerProps> = ({ questions, onComplete, lang, ti
                         // User selected CORRECT option
                         // Added ring for extra highlight
                         buttonClass += "border-green-500 bg-green-50 dark:bg-green-900/20 text-green-900 dark:text-green-100 ring-2 ring-green-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-900";
-                        icon = <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 relative z-10" />;
+                        icon = <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 relative z-10 flex-shrink-0" />;
                     } else {
                         // User selected INCORRECT option
                         // Added ring for extra highlight
                         buttonClass += "border-red-500 bg-red-50 dark:bg-red-900/20 text-red-900 dark:text-red-100 ring-2 ring-red-500 ring-offset-2 ring-offset-white dark:ring-offset-slate-900";
-                        icon = <XCircle className="w-6 h-6 text-red-600 dark:text-red-400 relative z-10" />;
+                        icon = <XCircle className="w-6 h-6 text-red-600 dark:text-red-400 relative z-10 flex-shrink-0" />;
                     }
                  } else if (isOptionCorrect) {
                     // This is the correct option, but user didn't select it (show it in green)
                     buttonClass += "border-green-500 bg-green-50 dark:bg-green-900/20 text-green-900 dark:text-green-100 opacity-75";
-                    icon = <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 relative z-10" />;
+                    icon = <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400 relative z-10 flex-shrink-0" />;
                  } else {
                     // Other incorrect unselected options
                     buttonClass += "border-slate-100 dark:border-slate-800 opacity-50 text-slate-400 dark:text-slate-600";
@@ -283,7 +283,7 @@ const ExamRunner: React.FC<ExamRunnerProps> = ({ questions, onComplete, lang, ti
                    disabled={isAnswered}
                    className={buttonClass}
                  >
-                   <span className="font-medium relative z-10">
+                   <span className="font-medium relative z-10 flex-1 text-left rtl:text-right whitespace-normal break-words pr-2 rtl:pl-2">
                      {opt}
                    </span>
                    {icon}
